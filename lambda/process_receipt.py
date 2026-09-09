@@ -65,7 +65,22 @@ def extract_vendor_and_total(textract_response):
         if ("vendor" in key_text or "merchant" in key_text or "store" in key_text) and vendor is None:
             vendor = value_text
 
+    # Fallback: if forms mode didn't find a clean vendor, or found
+    # something that looks wrong (e.g. just a number/store code),
+    # grab the first line of raw text on the page instead.
+    if not vendor or vendor.strip("#").replace(" ", "").isdigit():
+        vendor = _get_topmost_line(blocks)
+
     return vendor, total
+
+
+def _get_topmost_line(blocks):
+    """Return the text of the LINE block closest to the top of the page."""
+    line_blocks = [b for b in blocks if b["BlockType"] == "LINE"]
+    if not line_blocks:
+        return None
+    topmost = min(line_blocks, key=lambda b: b["Geometry"]["BoundingBox"]["Top"])
+    return topmost["Text"]
 
 
 def _get_text(block, block_map):
